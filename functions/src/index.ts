@@ -14,6 +14,12 @@ import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { onDocumentCreated } from "firebase-functions/firestore";
+import * as axios from "axios";
+
+import { TeamJson } from "./teamData";
+import { TeamStats } from "./teamStats";
+
+const RE_TOKEN = "***REMOVED***";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -49,6 +55,41 @@ export const makeUppercase = onDocumentCreated("messages/{documentId}", (event) 
 	const uppercase = original.toUpperCase();
 
 	return event.data?.ref.set({ uppercase }, { merge: true });
+});
+
+export const robotevents = onRequest(async (req, response) => {
+	try {
+		const res = await axios.get("https://robotevents.com/api/v2/teams?per_page=100", {
+			headers: {
+				Authorization: `Bearer ${RE_TOKEN}`
+			}
+		});
+
+		const json: TeamJson = res.data as TeamJson;
+		// console.log(json);
+
+		while (json.meta.current_page < json.meta.last_page) {
+			const res = await axios.get(json.meta.next_page_url, {
+				headers: {
+					Authorization: `Bearer ${RE_TOKEN}`
+				}
+			});
+			const result: TeamJson = res.data as TeamJson;
+			json.meta = result.meta;
+			json.data.push(...result.data);
+		}
+
+		let teams: TeamStats[] = [];
+		json.data.forEach((v, i) => {
+			teams.push(new TeamStats());
+			teams[i].updateTeamInfo(v);
+		});
+
+		console.log(teams);
+		response.status(200).send(teams);
+	} catch (error: any) {
+		response.status(500).send("Error fetching data: " + error.message);
+	}
 });
 
 initializeApp();
