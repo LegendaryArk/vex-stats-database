@@ -18,8 +18,7 @@ import * as axios from "axios";
 
 import { TeamJson } from "./teamData";
 import { TeamStats } from "./teamStats";
-
-const RE_TOKEN = "***REMOVED***";
+import { getToken } from "./tokens";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -61,7 +60,7 @@ export const robotevents = onRequest(async (req, response) => {
 	try {
 		const res = await axios.get("https://robotevents.com/api/v2/teams?per_page=100", {
 			headers: {
-				Authorization: `Bearer ${RE_TOKEN}`
+				Authorization: `Bearer ${getToken()}`
 			}
 		});
 
@@ -71,7 +70,7 @@ export const robotevents = onRequest(async (req, response) => {
 		while (json.meta.current_page < json.meta.last_page) {
 			const res = await axios.get(json.meta.next_page_url, {
 				headers: {
-					Authorization: `Bearer ${RE_TOKEN}`
+					Authorization: `Bearer ${getToken()}`
 				}
 			});
 			const result: TeamJson = res.data as TeamJson;
